@@ -1,0 +1,284 @@
+"""
+Example Usage: AGV Path Optimization
+=====================================
+This script demonstrates various use cases of the AGV path optimization simulator.
+"""
+
+from agv_path_optimizer import (
+    WarehouseGrid, 
+    PathfindingAlgorithms, 
+    Visualizer,
+    save_results_to_json
+)
+import matplotlib.pyplot as plt
+
+
+def example_1_basic_usage():
+    """Example 1: Basic A* pathfinding"""
+    print("\n" + "="*60)
+    print("EXAMPLE 1: Basic A* Pathfinding")
+    print("="*60)
+    
+    # Create warehouse with default layout
+    warehouse = WarehouseGrid(width=30, height=30)
+    warehouse.create_warehouse_layout("default")
+    
+    # Set positions
+    start = (2, 2)
+    goal = (27, 27)
+    
+    # Run A* algorithm
+    pathfinder = PathfindingAlgorithms(warehouse)
+    result = pathfinder.a_star(start, goal)
+    
+    # Print results
+    print(f"\nResults:")
+    print(f"  Path Length: {result['path_length']} cells")
+    print(f"  Nodes Explored: {result['nodes_explored']}")
+    print(f"  Execution Time: {result['execution_time']*1000:.2f} ms")
+    print(f"  Success: {result['success']}")
+    
+    # Visualize
+    visualizer = Visualizer(warehouse)
+    visualizer.plot_path(result)
+
+
+def example_2_compare_algorithms():
+    """Example 2: Compare all algorithms"""
+    print("\n" + "="*60)
+    print("EXAMPLE 2: Algorithm Comparison")
+    print("="*60)
+    
+    warehouse = WarehouseGrid(width=30, height=30)
+    warehouse.create_warehouse_layout("default")
+    
+    start = (2, 2)
+    goal = (27, 27)
+    
+    pathfinder = PathfindingAlgorithms(warehouse)
+    results = []
+    
+    # Run all algorithms
+    algorithms = [
+        ("A*", lambda: pathfinder.a_star(start, goal)),
+        ("Dijkstra", lambda: pathfinder.dijkstra(start, goal)),
+        ("BFS", lambda: pathfinder.bfs(start, goal))
+    ]
+    
+    for name, algo_func in algorithms:
+        print(f"\nRunning {name}...")
+        result = algo_func()
+        results.append(result)
+        print(f"  ✓ Path: {result['path_length']} | Explored: {result['nodes_explored']} | Time: {result['execution_time']*1000:.2f}ms")
+    
+    # Visualize comparison
+    visualizer = Visualizer(warehouse)
+    visualizer.compare_algorithms(results)
+    
+    # Save results
+    save_results_to_json(results, "comparison_results.json")
+    print("\n✓ Results saved to comparison_results.json")
+
+
+def example_3_different_heuristics():
+    """Example 3: Compare different heuristics for A*"""
+    print("\n" + "="*60)
+    print("EXAMPLE 3: Heuristic Comparison")
+    print("="*60)
+    
+    warehouse = WarehouseGrid(width=30, height=30)
+    warehouse.create_warehouse_layout("default")
+    
+    start = (2, 2)
+    goal = (27, 27)
+    
+    pathfinder = PathfindingAlgorithms(warehouse)
+    results = []
+    
+    heuristics = ["manhattan", "euclidean", "chebyshev"]
+    
+    for heuristic in heuristics:
+        print(f"\nTesting {heuristic.capitalize()} heuristic...")
+        result = pathfinder.a_star(start, goal, heuristic_type=heuristic)
+        result['algorithm'] = f"A* ({heuristic})"
+        results.append(result)
+        print(f"  ✓ Path: {result['path_length']} | Explored: {result['nodes_explored']}")
+    
+    # Visualize
+    visualizer = Visualizer(warehouse)
+    visualizer.compare_algorithms(results)
+
+
+def example_4_custom_warehouse():
+    """Example 4: Custom warehouse layout"""
+    print("\n" + "="*60)
+    print("EXAMPLE 4: Custom Warehouse Layout")
+    print("="*60)
+    
+    # Create custom warehouse
+    warehouse = WarehouseGrid(width=40, height=40)
+    
+    # Add custom obstacles (simulating warehouse racks)
+    print("\nCreating custom warehouse layout...")
+    
+    # Vertical racks
+    for i in range(5, 35):
+        warehouse.add_obstacle(10, i)
+        warehouse.add_obstacle(20, i)
+        warehouse.add_obstacle(30, i)
+    
+    # Add gaps for passages
+    for gap in [15, 25]:
+        warehouse.remove_obstacle(10, gap)
+        warehouse.remove_obstacle(20, gap)
+        warehouse.remove_obstacle(30, gap)
+    
+    # Horizontal obstacles
+    for j in range(12, 28):
+        warehouse.add_obstacle(j, 20)
+    warehouse.remove_obstacle(15, 20)
+    warehouse.remove_obstacle(25, 20)
+    
+    start = (2, 2)
+    goal = (37, 37)
+    
+    # Find path
+    pathfinder = PathfindingAlgorithms(warehouse)
+    result = pathfinder.a_star(start, goal)
+    
+    print(f"\nCustom warehouse pathfinding:")
+    print(f"  Path Length: {result['path_length']} cells")
+    print(f"  Nodes Explored: {result['nodes_explored']}")
+    
+    # Visualize
+    visualizer = Visualizer(warehouse)
+    visualizer.plot_path(result)
+
+
+def example_5_diagonal_movement():
+    """Example 5: Path with diagonal movement allowed"""
+    print("\n" + "="*60)
+    print("EXAMPLE 5: Diagonal Movement")
+    print("="*60)
+    
+    warehouse = WarehouseGrid(width=30, height=30)
+    warehouse.create_warehouse_layout("open")
+    
+    start = (2, 2)
+    goal = (27, 27)
+    
+    pathfinder = PathfindingAlgorithms(warehouse)
+    
+    # Without diagonal
+    result_4dir = pathfinder.a_star(start, goal, allow_diagonal=False)
+    print(f"\n4-directional movement:")
+    print(f"  Path Length: {result_4dir['path_length']}")
+    
+    # With diagonal
+    result_8dir = pathfinder.a_star(start, goal, allow_diagonal=True)
+    print(f"\n8-directional movement (diagonal allowed):")
+    print(f"  Path Length: {result_8dir['path_length']}")
+    
+    print(f"\nImprovement: {result_4dir['path_length'] - result_8dir['path_length']} cells shorter")
+    
+    # Visualize both
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    
+    visualizer = Visualizer(warehouse)
+    
+    # Plot 4-directional
+    plt.sca(axes[0])
+    visualizer.plot_path(result_4dir)
+    axes[0].set_title("4-Directional Movement")
+    
+    # Plot 8-directional
+    plt.sca(axes[1])
+    visualizer.plot_path(result_8dir)
+    axes[1].set_title("8-Directional Movement (Diagonal)")
+    
+    plt.tight_layout()
+    plt.show()
+
+
+def example_6_maze_layout():
+    """Example 6: Complex maze navigation"""
+    print("\n" + "="*60)
+    print("EXAMPLE 6: Maze Navigation")
+    print("="*60)
+    
+    warehouse = WarehouseGrid(width=30, height=30)
+    warehouse.create_warehouse_layout("maze")
+    
+    start = (2, 2)
+    goal = (27, 27)
+    
+    pathfinder = PathfindingAlgorithms(warehouse)
+    results = []
+    
+    # Test all algorithms on maze
+    print("\nNavigating complex maze layout...")
+    
+    result_astar = pathfinder.a_star(start, goal)
+    results.append(result_astar)
+    print(f"  A*: {result_astar['nodes_explored']} nodes explored")
+    
+    result_dijkstra = pathfinder.dijkstra(start, goal)
+    results.append(result_dijkstra)
+    print(f"  Dijkstra: {result_dijkstra['nodes_explored']} nodes explored")
+    
+    result_bfs = pathfinder.bfs(start, goal)
+    results.append(result_bfs)
+    print(f"  BFS: {result_bfs['nodes_explored']} nodes explored")
+    
+    print(f"\nA* efficiency advantage: {((result_bfs['nodes_explored'] - result_astar['nodes_explored']) / result_bfs['nodes_explored'] * 100):.1f}% fewer nodes")
+    
+    # Visualize
+    visualizer = Visualizer(warehouse)
+    visualizer.compare_algorithms(results)
+
+
+def run_all_examples():
+    """Run all examples"""
+    print("\n" + "="*60)
+    print("AGV PATH OPTIMIZATION - EXAMPLE DEMONSTRATIONS")
+    print("="*60)
+    print("\nThis script will run 6 examples demonstrating different features.")
+    print("Each example will generate visualizations.\n")
+    
+    input("Press Enter to start...")
+    
+    example_1_basic_usage()
+    input("\nPress Enter for next example...")
+    
+    example_2_compare_algorithms()
+    input("\nPress Enter for next example...")
+    
+    example_3_different_heuristics()
+    input("\nPress Enter for next example...")
+    
+    example_4_custom_warehouse()
+    input("\nPress Enter for next example...")
+    
+    example_5_diagonal_movement()
+    input("\nPress Enter for next example...")
+    
+    example_6_maze_layout()
+    
+    print("\n" + "="*60)
+    print("ALL EXAMPLES COMPLETED!")
+    print("="*60)
+
+
+if __name__ == "__main__":
+    # You can run individual examples or all at once
+    
+    # Run a single example:
+    # example_1_basic_usage()
+    # example_2_compare_algorithms()
+    # example_3_different_heuristics()
+    # example_4_custom_warehouse()
+    # example_5_diagonal_movement()
+    # example_6_maze_layout()
+    
+    # Or run all examples:
+    run_all_examples()
